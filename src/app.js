@@ -42,7 +42,7 @@ const FRONTEND_CHANGELOG = [
     title: "核查禁入紀錄",
     items: [
       "列表欄位調整為申請編號、類型、來源、狀態、禁入娛樂場範圍、創建時間、生效時間及廢止時間。",
-      "移除操作／查閱欄，新增類型、來源及狀態排序。",
+      "保留操作／查閱欄，並新增類型、來源及狀態排序。",
       "移除核查結果標題右側的生效中狀態標籤。",
     ],
   },
@@ -1048,6 +1048,7 @@ function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBac
                         jsx.jsx(SortableTh, { label: "創建時間", sortKey: "createdAt", sort: recordSort, onSort: onRecordSort }),
                         jsx.jsx(SortableTh, { label: "生效時間", sortKey: "start", sort: recordSort, onSort: onRecordSort }),
                         jsx.jsx(SortableTh, { label: "廢止時間", sortKey: "end", sort: recordSort, onSort: onRecordSort }),
+                        jsx.jsx("th", { children: "操作" }),
                       ],
                     }),
                   }),
@@ -1065,6 +1066,12 @@ function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBac
                             jsx.jsx("td", { children: record.createdAt }),
                             jsx.jsx("td", { children: record.start }),
                             jsx.jsx("td", { children: record.end }),
+                            jsx.jsx("td", {
+                              children: jsx.jsx(Button, {
+                                variant: "outline",
+                                children: "查閱",
+                              }),
+                            }),
                           ],
                         },
                         record.id,
