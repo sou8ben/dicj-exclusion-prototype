@@ -1129,6 +1129,52 @@ input[type="radio"]:focus-visible {
   font-size: 14px;
 }
 
+.draft-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 22px 0;
+  padding: 16px 18px;
+  border: 1px solid #b7cee0;
+  border-radius: 8px;
+  background: var(--brand-050);
+}
+
+.draft-alert.is-invalid {
+  border-color: #e2c2c5;
+  background: #fff6f6;
+}
+
+.draft-alert-content {
+  display: grid;
+  gap: 4px;
+}
+
+.draft-alert h3,
+.draft-alert p {
+  margin: 0;
+}
+
+.draft-alert h3 {
+  color: var(--brand-900);
+  font-size: 16px;
+}
+
+.draft-alert.is-invalid h3,
+.draft-alert-reason {
+  color: var(--danger-text);
+}
+
+.draft-alert p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.draft-alert > .btn {
+  flex: 0 0 auto;
+}
+
 .form-actions {
   display: flex;
   gap: 12px;

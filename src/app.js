@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { label: "帳號管理", id: "accounts", icon: rf },
   { label: "操作日誌", id: "logs", icon: W8 },
 ];
+const APP_VERSION = "2026.09.15 09:00AM";
 
 /* ---- 7.2 工具函數 Utils ---- */
 const statusColor = (status) =>
@@ -81,25 +82,6 @@ const clearAllDrafts = () => {
   }
 };
 const seedDemoDrafts = () => Object.entries(DemoDrafts).forEach(([key, value]) => saveDraft(key, value));
-const parseDraftKey = (key) => {
-  const rest = key.startsWith(DraftKeyPrefix) ? key.slice(DraftKeyPrefix.length) : key,
-    separator = rest.indexOf(":");
-  return separator === -1 ? { docType: rest, docNo: "" } : { docType: rest.slice(0, separator), docNo: rest.slice(separator + 1) };
-};
-const draftTypeLabel = (draft) => (draft.mode === "terminate" ? "廢止" : draft.appType === "續期" ? "續期" : "申請");
-const listDrafts = () => {
-  try {
-    return Object.keys(localStorage)
-      .filter((key) => key.startsWith(DraftKeyPrefix))
-      .map((key) => {
-        const { docType, docNo } = parseDraftKey(key);
-        return { key: key, docType: docType, docNo: docNo, draft: loadDraft(key) || {} };
-      })
-      .sort((left, right) => String(right.draft.savedAt || "").localeCompare(String(left.draft.savedAt || "")));
-  } catch (error) {
-    return [];
-  }
-};
 const parseICS = (content) => {
   const unfolded = String(content)
       .replace(/\r\n/g, "\n")
@@ -572,102 +554,7 @@ function ApplicationsTable({ rows: rows, onOpen: onOpen, actionLabel: actionLabe
     }),
   });
 }
-function DraftRecordsPanel({ onDeleteDraft: onDeleteDraft, onContinueDraft: onContinueDraft }) {
-  const [drafts, setDrafts] = React.useState(() => listDrafts()),
-    [sort, setSort] = React.useState({ key: null, direction: "asc" }),
-    onSort = (nextSort) => setSort(nextSort),
-    sortedDrafts = React.useMemo(
-      () =>
-        sortRowsForDisplay(drafts, sort, {
-          docType: (item) => item.docType,
-          docNo: (item) => item.docNo,
-          draftType: (item) => draftTypeLabel(item.draft),
-          savedAt: (item) => item.draft.savedAt,
-        }),
-      [drafts, sort],
-    );
-  return jsx.jsxs("section", {
-    className: "panel",
-    children: [
-      jsx.jsxs("div", {
-        className: "section-title",
-        children: [
-          jsx.jsx("h2", { children: "暫存" }),
-
-        ],
-      }),
-      jsx.jsx("div", {
-        className: "table-wrap",
-        children: jsx.jsxs("table", {
-          children: [
-            jsx.jsx("thead", {
-              children: jsx.jsxs("tr", {
-                children: [
-                  jsx.jsx(SortableTh, { label: "證件類型", sortKey: "docType", sort: sort, onSort: onSort }),
-                  jsx.jsx(SortableTh, { label: "證件號碼", sortKey: "docNo", sort: sort, onSort: onSort }),
-                  jsx.jsx(SortableTh, { label: "申請類型", sortKey: "draftType", sort: sort, onSort: onSort }),
-                  jsx.jsx(SortableTh, { label: "暫存時間", sortKey: "savedAt", sort: sort, onSort: onSort }),
-                  jsx.jsx("th", { children: "操作" }),
-                ],
-              }),
-            }),
-            jsx.jsx("tbody", {
-              children:
-                drafts.length > 0
-                  ? sortedDrafts.map((item) =>
-                      jsx.jsxs(
-                        "tr",
-                        {
-                          children: [
-                            jsx.jsx("td", { className: "strong", children: item.docType }),
-                            jsx.jsx("td", { children: item.docNo }),
-                            jsx.jsx("td", { children: draftTypeLabel(item.draft) }),
-                            jsx.jsx("td", { children: item.draft.savedAt || "—" }),
-                            jsx.jsx("td", {
-                              children: jsx.jsxs("div", {
-                                className: "button-row",
-                                children: [
-                                  jsx.jsx(Button, {
-                                    onClick: () => onContinueDraft && onContinueDraft(item),
-                                    children: "繼續",
-                                  }),
-                                  jsx.jsx(Button, {
-                                    variant: "outline",
-                                    onClick: () => {
-                                      (removeDraft(item.key),
-                                        setDrafts(drafts.filter((draft) => draft.key !== item.key)),
-                                        onDeleteDraft && onDeleteDraft());
-                                    },
-                                    children: "刪除",
-                                  }),
-                                ],
-                              }),
-                            }),
-                          ],
-                        },
-                        item.key,
-                      ),
-                    )
-                  : jsx.jsx("tr", {
-                      className: "empty-state",
-                      children: jsx.jsx("td", {
-                        colSpan: 5,
-                        children: jsx.jsxs("div", {
-                          children: [
-                            jsx.jsx("strong", { children: "暫無暫存草稿" }),
-                            jsx.jsx("span", { children: "臨櫃收件時未完成填寫的申請會自動暫存在此。" }),
-                          ],
-                        }),
-                      }),
-                    }),
-            }),
-          ],
-        }),
-      }),
-    ],
-  });
-}
-function DashboardScreen({ applications: applications, onOpen: onOpen, onNavigate: onNavigate, role: role, onDeleteDraft: onDeleteDraft, onContinueDraft: onContinueDraft }) {
+function DashboardScreen({ applications: applications, onOpen: onOpen, role: role }) {
   const [page, setPage] = React.useState(1),
     [pageSize, setPageSize] = React.useState(10),
     today = new Date("2026-08-29"),
@@ -741,7 +628,6 @@ function DashboardScreen({ applications: applications, onOpen: onOpen, onNavigat
           }),
         ],
       }),
-      jsx.jsx(DraftRecordsPanel, { onDeleteDraft: onDeleteDraft, onContinueDraft: onContinueDraft }),
       jsx.jsxs("section", {
         className: "panel",
         children: [
@@ -830,7 +716,6 @@ function IntakeReadScreen({ mode: mode, onContinue: onContinue, fillKey: fillKey
             className: "section-title",
             children: [
               jsx.jsx("h2", { children: "讀取證件方式" }),
-              jsx.jsx("span", { children: "身份驗證" }),
             ],
           }),
           jsx.jsx(WizardProgress, { current: 1, steps: mode === "terminate" ? WizardSteps.terminate : WizardSteps.intake }),
@@ -963,12 +848,17 @@ function IntakeReadScreen({ mode: mode, onContinue: onContinue, fillKey: fillKey
     ],
   });
 }
-function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBack, onContinue: onContinue }) {
+function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBack, onContinue: onContinue, onResumeDraft: onResumeDraft }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const recordKey = docType && docNo ? `${docType}:${docNo}` : "",
     records = ((DemoData.exclusionHistory && recordKey && DemoData.exclusionHistory[recordKey]) || []).map(
-      (record) => ({ ...record, status: new Date(record.end) >= today ? "生效中" : "已失效" }),
+      (record) => ({
+        ...record,
+        type: record.type || "申請",
+        source: record.source || "親臨",
+        status: new Date(record.end) >= today ? "生效中" : "已失效",
+      }),
     ),
     activeRecord = records.find((record) => record.status === "生效中"),
     daysLeft = activeRecord ? Math.round((new Date(activeRecord.end) - today) / 864e5) : null,
@@ -981,16 +871,64 @@ function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBac
           ? "new"
           : daysLeft <= 30
             ? "renew"
-            : "blocked";
-  const [recordSort, setRecordSort] = React.useState({ key: null, direction: "asc" }),
+            : "blocked",
+    draftKeyValue = docType && docNo ? buildDraftKey(docType, docNo) : null;
+  const [detectedDraft, setDetectedDraft] = React.useState(() => (draftKeyValue ? loadDraft(draftKeyValue) : null)),
+    [recordSort, setRecordSort] = React.useState({ key: null, direction: "asc" }),
     onRecordSort = (nextSort) => setRecordSort(nextSort),
     sortedRecords = sortRowsForDisplay(records, recordSort, {
       id: (record) => record.id,
+      type: (record) => record.type,
+      source: (record) => record.source,
+      status: (record) => record.status,
       scope: (record) => record.scope,
       createdAt: (record) => record.createdAt,
       start: (record) => record.start,
       end: (record) => record.end,
-    });
+    }),
+    draftKind = detectedDraft
+      ? detectedDraft.mode === "terminate"
+        ? "terminate"
+        : detectedDraft.appType === "續期"
+          ? "renew"
+          : detectedDraft.appType === "新申請"
+            ? "new"
+            : "unknown"
+      : null,
+    draftTypeText = draftKind === "terminate" ? "廢止" : draftKind === "renew" ? "續期" : draftKind === "new" ? "新申請" : "未知",
+    draftFlowText = draftKind === "terminate" ? "廢止流程" : "申請流程",
+    draftEligible =
+      draftKind === "new"
+        ? !activeRecord
+        : draftKind === "renew"
+          ? Boolean(activeRecord && daysLeft <= 30)
+          : draftKind === "terminate"
+            ? Boolean(activeRecord)
+            : false,
+    draftInvalidReason =
+      !detectedDraft || draftEligible
+        ? ""
+        : draftKind === "new"
+          ? "目前查有生效中的禁入紀錄，原有新申請草稿已不符合受理條件。"
+          : draftKind === "renew" && !activeRecord
+            ? "目前查無生效中的禁入紀錄，原有續期草稿已不符合受理條件。"
+            : draftKind === "renew"
+              ? "目前未到續期受理時間，原有續期草稿已不符合受理條件。"
+              : draftKind === "terminate"
+                ? "目前查無可廢止的生效紀錄，原有廢止草稿已不符合受理條件。"
+                : "草稿資料不完整，無法恢復。",
+    canStartCurrentFlow = resultType === "new" || resultType === "renew" || resultType === "terminate",
+    deleteDetectedDraft = () => {
+      if (draftKeyValue) removeDraft(draftKeyValue);
+      setDetectedDraft(null);
+    },
+    startFresh = (appType) => {
+      deleteDetectedDraft();
+      onContinue(appType);
+    };
+  React.useEffect(() => {
+    setDetectedDraft(draftKeyValue ? loadDraft(draftKeyValue) : null);
+  }, [draftKeyValue]);
   return jsx.jsxs(jsx.Fragment, {
     children: [
       jsx.jsx("div", {
@@ -1009,8 +947,7 @@ function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBac
           jsx.jsxs("div", {
             className: "section-title",
             children: [
-              jsx.jsx("h2", { children: "核查禁入紀錄" }),
-              jsx.jsx("span", { children: "核查紀錄" }),
+              jsx.jsx("h2", { children: "核查禁入紀錄" })
             ],
           }),
           jsx.jsx(WizardProgress, { current: 2, steps: mode === "terminate" ? WizardSteps.terminate : WizardSteps.intake }),
@@ -1027,9 +964,39 @@ function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBac
                   }),
                 ],
               }),
-              activeRecord && jsx.jsx(Badge, { children: activeRecord.status }),
             ],
           }),
+          detectedDraft &&
+            jsx.jsxs("div", {
+              className: `draft-alert${draftEligible ? "" : " is-invalid"}`,
+              role: "status",
+              children: [
+                jsx.jsxs("div", {
+                  className: "draft-alert-content",
+                  children: [
+                    jsx.jsx("h3", { children: draftEligible ? "發現暫存草稿" : "暫存草稿已失效" }),
+                    jsx.jsx("p", {
+                      children: `草稿類型：${draftTypeText}　暫存時間：${detectedDraft.savedAt || "—"}　所屬流程：${draftFlowText}`,
+                    }),
+                    draftEligible &&
+                      ((mode === "terminate") !== (draftKind === "terminate")) &&
+                      jsx.jsx("p", { children: `此草稿屬於${draftFlowText}，恢復後將自動切換流程。` }),
+                    draftInvalidReason && jsx.jsx("p", { className: "draft-alert-reason", children: draftInvalidReason }),
+                  ],
+                }),
+                draftEligible
+                  ? jsx.jsx(Button, {
+                      onClick: () => onResumeDraft(detectedDraft),
+                      children: "恢復草稿",
+                    })
+                  : !canStartCurrentFlow &&
+                    jsx.jsx(Button, {
+                      variant: "danger",
+                      onClick: deleteDetectedDraft,
+                      children: "刪除草稿",
+                    }),
+              ],
+            }),
           resultType === "new" &&
             jsx.jsx("div", {
               className: "record-alert",
@@ -1046,12 +1013,14 @@ function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBac
                   jsx.jsx("thead", {
                     children: jsx.jsxs("tr", {
                       children: [
-                        jsx.jsx(SortableTh, { label: "編號", sortKey: "id", sort: recordSort, onSort: onRecordSort }),
+                        jsx.jsx(SortableTh, { label: "申請編號", sortKey: "id", sort: recordSort, onSort: onRecordSort }),
+                        jsx.jsx(SortableTh, { label: "類型", sortKey: "type", sort: recordSort, onSort: onRecordSort }),
+                        jsx.jsx(SortableTh, { label: "來源", sortKey: "source", sort: recordSort, onSort: onRecordSort }),
+                        jsx.jsx(SortableTh, { label: "狀態", sortKey: "status", sort: recordSort, onSort: onRecordSort }),
                         jsx.jsx(SortableTh, { label: "禁入娛樂場範圍", sortKey: "scope", sort: recordSort, onSort: onRecordSort }),
                         jsx.jsx(SortableTh, { label: "創建時間", sortKey: "createdAt", sort: recordSort, onSort: onRecordSort }),
                         jsx.jsx(SortableTh, { label: "生效時間", sortKey: "start", sort: recordSort, onSort: onRecordSort }),
                         jsx.jsx(SortableTh, { label: "廢止時間", sortKey: "end", sort: recordSort, onSort: onRecordSort }),
-                        jsx.jsx("th", { children: "操作" }),
                       ],
                     }),
                   }),
@@ -1062,16 +1031,13 @@ function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBac
                         {
                           children: [
                             jsx.jsx("td", { className: "strong", children: record.id }),
+                            jsx.jsx("td", { children: record.type }),
+                            jsx.jsx("td", { children: record.source }),
+                            jsx.jsx("td", { children: jsx.jsx(Badge, { children: record.status }) }),
                             jsx.jsx("td", { children: record.scope }),
                             jsx.jsx("td", { children: record.createdAt }),
                             jsx.jsx("td", { children: record.start }),
                             jsx.jsx("td", { children: record.end }),
-                            jsx.jsx("td", {
-                              children: jsx.jsx(Button, {
-                                variant: "outline",
-                                children: "查閱",
-                              }),
-                            }),
                           ],
                         },
                         record.id,
@@ -1101,18 +1067,18 @@ function RecordCheck({ mode: mode, docNo: docNo, docType: docType, onBack: onBac
               jsx.jsx(Button, { variant: "ghost", onClick: onBack, children: "上一步" }),
               resultType === "new"
                 ? jsx.jsx(Button, {
-                    onClick: () => onContinue("新申請"),
-                    children: "進行申請",
+                    onClick: () => detectedDraft ? startFresh("新申請") : onContinue("新申請"),
+                    children: detectedDraft ? "重新填寫" : "進行申請",
                   })
                 : resultType === "renew"
                   ? jsx.jsx(Button, {
-                      onClick: () => onContinue("續期"),
-                      children: "進行續期申請",
+                      onClick: () => detectedDraft ? startFresh("續期") : onContinue("續期"),
+                      children: detectedDraft ? "重新填寫" : "進行續期申請",
                     })
                   : resultType === "terminate"
                     ? jsx.jsx(Button, {
-                        onClick: () => onContinue(true),
-                        children: "進行廢止申請",
+                        onClick: () => detectedDraft ? startFresh(true) : onContinue(true),
+                        children: detectedDraft ? "重新填寫" : "進行廢止申請",
                       })
                     : jsx.jsx(Button, {
                         disabled: true,
@@ -1307,55 +1273,23 @@ function ApplicationFormScreen({ mode: mode, onSubmit: onSubmit, onCancel: onCan
       relativeReadMethod,
       relative,
     ]),
-    draftDirtyBaselineRef = React.useRef(null),
-    [draftPending, setDraftPending] = React.useState(null),
-    draftDecidedRef = React.useRef(Boolean(initialDraft)),
-    applyDraft = (saved) => {
-      (setStep(saved.step || 1),
-        setPartyType(saved.partyType || ""),
-        setTerm(saved.term || ""),
-        setScope(saved.scope || ""),
-        setCounsel(saved.counsel || ""),
-        setDocType(saved.docType || ""),
-        setDocuments(saved.documents || []),
-        setPhotoName(saved.photoName || ""),
-        setPersonal({ occupation: "", email: "", phoneCode: "+853", phone: "", address: "", ...(saved.personal || {}) }),
-        setEffectiveDate(saved.effectiveDate || ""),
-        setEndDate(saved.endDate || ""),
-        setTermInvalidFields([]),
-        setCompanies(saved.companies || []),
-        setRelativeDocType(saved.relativeDocType || ""),
-        setRelativeFiles(saved.relativeFiles || []),
-        setRelativeReadMethod(saved.relativeReadMethod || ""),
-        setRelative({ relation: "", name: "", en: "", gender: "", birth: "", docType: "", docNo: "", occupation: "", email: "", phoneCode: "+853", phone: "", address: "", ...(saved.relative || {}) }),
-        setRelativeInvalid([]),
-        setDraftPending(null),
-        (draftDecidedRef.current = true));
-    },
-    dismissDraft = () => (setDraftPending(null), (draftDecidedRef.current = true)),
-    discardDraft = () => (removeDraft(draftKeyValue), setDraftPending(null), (draftDecidedRef.current = true));
+    draftDirtyBaselineRef = React.useRef(null);
   React.useEffect(() => {
     if (fillKey > 0) fillDefaults();
   }, [fillKey]);
   React.useEffect(() => {
-    if (initialDraft || !draftKeyValue || fillKey > 0) return;
-    const saved = loadDraft(draftKeyValue);
-    if (saved) setDraftPending(saved);
-    else draftDecidedRef.current = true;
-  }, []);
-  React.useEffect(() => {
-    if (!draftKeyValue || draftPending || !draftDecidedRef.current || !draftHasContent) return;
+    if (!draftKeyValue || !draftHasContent) return;
     const timer = setTimeout(() => saveDraft(draftKeyValue, draftSnapshot), 400);
     return () => clearTimeout(timer);
-  }, [draftKeyValue, draftPending, draftHasContent, JSON.stringify(draftSnapshot)]);
+  }, [draftKeyValue, draftHasContent, JSON.stringify(draftSnapshot)]);
   React.useEffect(() => {
     if (!onSaveRef) return;
     onSaveRef(() => {
-      if (!draftKeyValue || draftPending || !draftHasContent) return;
+      if (!draftKeyValue || !draftHasContent) return;
       saveDraft(draftKeyValue, draftSnapshot);
     });
     return () => onSaveRef(null);
-  }, [draftKeyValue, draftPending, draftHasContent, JSON.stringify(draftSnapshot)]);
+  }, [draftKeyValue, draftHasContent, JSON.stringify(draftSnapshot)]);
   React.useEffect(() => {
     if (draftDirtyBaselineRef.current === null) draftDirtyBaselineRef.current = draftBodyKey;
     else if (draftDirtyBaselineRef.current !== draftBodyKey) onDirty && onDirty();
@@ -1373,7 +1307,6 @@ function ApplicationFormScreen({ mode: mode, onSubmit: onSubmit, onCancel: onCan
             className: "section-title",
             children: [
               jsx.jsx("h2", { children: "選擇申請方式" }),
-              jsx.jsx("span", { children: "填寫申請資料" }),
             ],
           }),
           jsx.jsx(WizardProgress, { current: wizardCurrent, steps: wizardSteps }),
@@ -1429,7 +1362,6 @@ function ApplicationFormScreen({ mode: mode, onSubmit: onSubmit, onCancel: onCan
                 className: "section-title",
                 children: [
                   jsx.jsx("h2", { children: "填寫親屬證件資料" }),
-                  jsx.jsx("span", { children: "填寫申請資料" }),
                 ],
               }),
               jsx.jsx(WizardProgress, { current: wizardCurrent, steps: wizardSteps }),
@@ -1602,7 +1534,6 @@ function ApplicationFormScreen({ mode: mode, onSubmit: onSubmit, onCancel: onCan
                   className: "section-title",
                   children: [
                     jsx.jsx("h2", { children: "填寫親屬資料" }),
-                    jsx.jsx("span", { children: "填寫申請資料" }),
                   ],
                 }),
                 jsx.jsx(WizardProgress, { current: wizardCurrent, steps: wizardSteps }),
@@ -1751,9 +1682,6 @@ function ApplicationFormScreen({ mode: mode, onSubmit: onSubmit, onCancel: onCan
               children: [
                 jsx.jsx("h2", {
                   children: mode === "terminate" ? "填寫廢止資料" : "填寫申請資料",
-                }),
-                jsx.jsx("span", {
-                  children: "填寫申請資料",
                 }),
               ],
             }),
@@ -2187,43 +2115,10 @@ function ApplicationFormScreen({ mode: mode, onSubmit: onSubmit, onCancel: onCan
                           ? "填寫廢止申請資料。"
                           : "填寫申請資料。",
             }),
-            draftDecidedRef.current &&
-              draftHasContent &&
-              jsx.jsx("p", {
-                className: "helper",
-                children: "草稿已自動暫存，離開流程後可依證件類型與證件號碼恢復",
-              }),
           ],
         }),
       }),
       content,
-      draftPending &&
-        jsx.jsx(Modal, {
-          title: "恢復暫存草稿",
-          onClose: dismissDraft,
-          children: jsx.jsxs(jsx.Fragment, {
-            children: [
-              jsx.jsx("p", {
-                className: "confirm-text",
-                children: `偵測到「${applicant.docType} · ${docNo}」於 ${draftPending.savedAt} 暫存的申請草稿，是否恢復繼續填寫？`,
-              }),
-              jsx.jsxs("div", {
-                className: "form-actions",
-                children: [
-                  jsx.jsx(Button, {
-                    variant: "danger",
-                    onClick: discardDraft,
-                    children: "重新填寫",
-                  }),
-                  jsx.jsx(Button, {
-                    onClick: () => applyDraft(draftPending),
-                    children: "恢復草稿",
-                  }),
-                ],
-              }),
-            ],
-          }),
-        }),
       previewFile && jsx.jsx(FilePreview, { file: previewFile, onClose: () => setPreviewFile(null) }),
     ],
   });
@@ -4473,24 +4368,19 @@ function App() {
         (window.history.pushState(null, "", `#${routeId}`), setRoute(routeId), setCurrentApplication(null), setIntake(null), setCheckResult(null), setResumeDraft(null), setFlowDirty(false));
       });
     },
-    continueDraft = (item) => {
-      const saved = loadDraft(item.key);
-      if (!saved) {
-        (setToast("找不到暫存草稿"), setTimeout(() => setToast(""), 2200));
-        return;
-      }
+    resumeCheckedDraft = (saved) => {
       const targetRoute = saved.mode === "terminate" ? "terminate" : "intake";
       (setCurrentApplication(null),
         setIntake({
           mode: targetRoute,
-          docNo: saved.docNo || item.docNo,
-          applicant: { ...(saved.applicant || {}), docType: (saved.applicant && saved.applicant.docType) || item.docType },
+          docNo: saved.docNo || (intake && intake.docNo) || "",
+          applicant: { ...((intake && intake.applicant) || {}), ...(saved.applicant || {}) },
         }),
-        setCheckResult(saved.appType || true),
+        setCheckResult(targetRoute === "terminate" ? true : saved.appType),
         setResumeDraft(saved),
         setFlowDirty(false),
         setRoute(targetRoute),
-        window.history.pushState(null, "", `#${targetRoute}`),
+        window.history.replaceState(null, "", `#${targetRoute}`),
         setToast("已恢復暫存草稿"),
         setTimeout(() => setToast(""), 2200));
     },
@@ -4585,12 +4475,7 @@ function App() {
         return jsx.jsx(DashboardScreen, {
           applications: applications,
           onOpen: openDetail,
-          onNavigate: navigate,
           role: role,
-          onContinueDraft: continueDraft,
-          onDeleteDraft: () => {
-            (setToast("暫存草稿已刪除"), setTimeout(() => setToast(""), 2200));
-          },
         });
       if (route === "intake" || route === "terminate")
         return !intake
@@ -4602,6 +4487,7 @@ function App() {
                 docType: intake.applicant && intake.applicant.docType,
                 onBack: () => setIntake(null),
                 onContinue: (appType) => (setResumeDraft(null), setCheckResult(appType || true)),
+                onResumeDraft: resumeCheckedDraft,
               })
             : jsx.jsx(ApplicationFormScreen, {
                 mode: route === "terminate" ? "terminate" : "new",
@@ -4795,7 +4681,10 @@ function App() {
               ),
             ),
           }),
-
+          jsx.jsx("div", {
+            className: "sidebar-foot",
+            children: jsx.jsx("span", { children: `版本 ${APP_VERSION}` }),
+          }),
         ],
       }),
       jsx.jsx("main", { className: "content", children: renderScreen() }),
