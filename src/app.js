@@ -28,6 +28,33 @@ const NAV_ITEMS = [
   { label: "操作日誌", id: "logs", icon: W8 },
 ];
 const APP_VERSION = "2026.09.15 09:00AM";
+const FRONTEND_CHANGELOG = [
+  {
+    title: "暫存草稿流程",
+    items: [
+      "移除工作台的暫存 Panel，草稿改於核查禁入紀錄步驟偵測。",
+      "支援按最新禁入紀錄判斷草稿能否恢復，並顯示不相容原因。",
+      "恢復草稿時可自動切換申請或廢止流程；重新填寫會先刪除舊草稿。",
+      "保留自動暫存、離開流程時儲存，以及提交成功後刪除草稿。",
+    ],
+  },
+  {
+    title: "核查禁入紀錄",
+    items: [
+      "列表欄位調整為申請編號、類型、來源、狀態、禁入娛樂場範圍、創建時間、生效時間及廢止時間。",
+      "移除操作／查閱欄，新增類型、來源及狀態排序。",
+      "移除核查結果標題右側的生效中狀態標籤。",
+    ],
+  },
+  {
+    title: "介面整理",
+    items: [
+      "移除表單頁的草稿恢復彈窗及自動暫存提示 popup。",
+      "移除流程頁 section-title 右側的輔助說明文字。",
+      "版本號移至左側導覽列底部，點擊可查看本次前端改動。",
+    ],
+  },
+];
 
 /* ---- 7.2 工具函數 Utils ---- */
 const statusColor = (status) =>
@@ -4347,6 +4374,7 @@ function App() {
     [fillKey, setFillKey] = React.useState(0),
     [fillScenario, setFillScenario] = React.useState(""),
     [pendingLeaveAction, setPendingLeaveAction] = React.useState(null),
+    [showFrontendChanges, setShowFrontendChanges] = React.useState(false),
     [flowDirty, setFlowDirty] = React.useState(false),
         contextMenuRef = React.useRef(null),
         draftSaveRef = React.useRef(null),
@@ -4681,13 +4709,38 @@ function App() {
               ),
             ),
           }),
-          jsx.jsx("div", {
+          jsx.jsx("button", {
+            type: "button",
             className: "sidebar-foot",
+            onClick: () => setShowFrontendChanges(true),
+            "aria-haspopup": "dialog",
             children: jsx.jsx("span", { children: `版本 ${APP_VERSION}` }),
           }),
         ],
       }),
       jsx.jsx("main", { className: "content", children: renderScreen() }),
+      showFrontendChanges &&
+        jsx.jsx(Modal, {
+          title: `版本 ${APP_VERSION} 前端改動`,
+          onClose: () => setShowFrontendChanges(false),
+          children: jsx.jsx("div", {
+            className: "frontend-changelog",
+            children: FRONTEND_CHANGELOG.map((section) =>
+              jsx.jsxs(
+                "section",
+                {
+                  children: [
+                    jsx.jsx("h3", { children: section.title }),
+                    jsx.jsx("ul", {
+                      children: section.items.map((item) => jsx.jsx("li", { children: item }, item)),
+                    }),
+                  ],
+                },
+                section.title,
+              ),
+            ),
+          }),
+        }),
       pendingLeaveAction && jsx.jsx(Modal, {
         title: "確認離開流程",
         onClose: () => setPendingLeaveAction(null),

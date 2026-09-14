@@ -213,6 +213,22 @@ header {
   padding: 16px 10px 24px;
 }
 
+button.sidebar-foot {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--border-default);
+  background: var(--surface-card);
+  text-align: left;
+}
+
+button.sidebar-foot:hover {
+  background: var(--brand-050);
+}
+
+button.sidebar-foot:focus-visible {
+  outline-offset: -3px;
+}
+
 .nav-group {
   margin-bottom: 3px;
 }
@@ -1173,6 +1189,35 @@ input[type="radio"]:focus-visible {
 
 .draft-alert > .btn {
   flex: 0 0 auto;
+}
+
+.frontend-changelog {
+  display: grid;
+  gap: 20px;
+}
+
+.frontend-changelog section {
+  display: grid;
+  gap: 8px;
+}
+
+.frontend-changelog h3,
+.frontend-changelog ul {
+  margin: 0;
+}
+
+.frontend-changelog h3 {
+  color: var(--brand-900);
+  font-size: 15px;
+}
+
+.frontend-changelog ul {
+  padding-left: 22px;
+  color: var(--text-secondary);
+}
+
+.frontend-changelog li + li {
+  margin-top: 6px;
 }
 
 .form-actions {
