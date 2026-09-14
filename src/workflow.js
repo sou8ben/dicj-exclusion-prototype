@@ -88,12 +88,6 @@
       section: "main",
       message: "已記錄處理人員完成案件處理",
     },
-    print_signed_documents: {
-      label: "列印已簽文件",
-      role: ROLES.COUNTER,
-      section: "document",
-      message: "已簽文件已列印",
-    },
     send_pickup_notice: {
       label: "發送取件通知",
       role: ROLES.COUNTER,
@@ -184,8 +178,7 @@
       case "已審批": {
         const actionIds = [];
         if (!flags.processingCompleted) actionIds.push("complete_processing");
-        if (!flags.documentsPrinted) actionIds.push("print_signed_documents");
-        if (flags.documentsPrinted) actionIds.push("send_pickup_notice");
+        actionIds.push("send_pickup_notice");
         return actionIds;
       }
       case "已通知取件":
@@ -245,26 +238,6 @@
     return "—";
   }
 
-  function getStageLabel(application) {
-    if (!application) return "—";
-    if (application.status === "完成") return "流程完成";
-    if (application.status === "作廢") return "案件已終止";
-    if (application.source === SOURCES.COUNTER && application.status === "待審批") {
-      return application.stage === "supervisor_approval" ? "待主管審批" : "待處理人員複核";
-    }
-    const labels = {
-      待處理: "初步檢查",
-      待通知補件: "準備補件通知",
-      已通知補件: "等待補交資料",
-      退回: "等待修正及補交",
-      待複核: "案件複核",
-      待審批: "主管審批",
-      已審批: "文件及交件處理",
-      已通知取件: "等待申請人取件",
-    };
-    return labels[application.status] || application.status;
-  }
-
   function applyAction(application, actionId) {
     const next = {
       ...application,
@@ -308,7 +281,6 @@
       case "complete_processing":
         next.flags.processingCompleted = true;
         break;
-      case "print_signed_documents":
       case "counter_print_documents":
         next.flags.documentsPrinted = true;
         break;
@@ -372,7 +344,6 @@
     getActionableApplications,
     getAvailableActions,
     getResponsibleRole,
-    getStageLabel,
     isActionable,
     transition,
   };

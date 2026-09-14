@@ -41,7 +41,6 @@ const {
   getActionableApplications,
   getAvailableActions,
   getResponsibleRole,
-  getStageLabel,
   transition: transitionApplication,
 } = dicjWorkflow;
 
@@ -63,6 +62,17 @@ const makeDemoApplication = (application) => ({
     },
   ],
   ...application,
+  applicantDetails: {
+    foreignName: "WONG CHI MEN",
+    gender: "男",
+    birthDate: "1984-03-16",
+    docType: "澳門居民身份證",
+    docNo: "1234567(8)",
+    phone: "+853 6688 1234",
+    email: "demo@example.com",
+    address: "澳門黑沙環海邊馬路88號",
+    ...(application.applicantDetails || {}),
+  },
   flags: {
     correctionNoticeSent: false,
     processingCompleted: false,
@@ -72,7 +82,7 @@ const makeDemoApplication = (application) => ({
 });
 
 const padDatePart = (part) => String(part).padStart(2, "0"),
-  // 證件 13888888 的廢止時間：當前日期 + 20 天，讓廢止申請流程隨時可演示
+  // 澳門居民身份證 13888888 的廢止時間：當前日期 + 20 天，讓廢止申請流程隨時可演示
   exclusionEndDate = (() => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 20);
@@ -302,8 +312,9 @@ const DemoData = {
     { name: "聖誕節前日", date: "2026-12-24", created: "2026-06-30 15:20" },
     { name: "聖誕節", date: "2026-12-25", created: "2026-06-30 15:20" },
   ],
+  // 以「證件類型:證件號碼」為鍵，核查時需兩者相符
   exclusionHistory: {
-    13888888: [
+    "澳門居民身份證:13888888": [
       {
         id: "98/DICJ/2025",
         scope: "全部",
@@ -319,7 +330,7 @@ const DemoData = {
         end: "2025-09-01 00:00",
       },
     ],
-    88888888: [
+    "澳門居民身份證:88888888": [
       {
         id: "88/DICJ/2025",
         scope: "全部",
@@ -328,7 +339,7 @@ const DemoData = {
         end: "2027-09-01 00:00",
       },
     ],
-    20001234: [
+    "澳門居民身份證:20001234": [
       {
         id: "61/DICJ/2024",
         scope: "全部",
@@ -405,3 +416,67 @@ const DemoData = {
   },
 };
 
+/* ----------------------------------------------------------------
+ * 7.2 暫存草稿示範資料 Demo Drafts
+ * 暫存以「證件類型 + 證件號碼」為 key 核心，寫入 localStorage。
+ * 頁面載入及「重置演示資料」時由 app.js 的 seedDemoDrafts() 寫入，
+ * 供臨櫃收件流程演示「偵測草稿 → 恢復填寫」。
+ * ---------------------------------------------------------------- */
+const DraftKeyPrefix = "dicj:draft:";
+const DemoDrafts = {
+  [`${DraftKeyPrefix}澳門居民身份證:12345678`]: {
+    v: 1,
+    savedAt: "2026-09-11 10:15",
+    mode: "new",
+    appType: "新申請",
+    docNo: "12345678",
+    applicant: { gender: "男", birth: "1990-03-15", docType: "澳門居民身份證" },
+    step: 2,
+    partyType: "本人申請",
+    term: "一年",
+    scope: "全部",
+    counsel: "同意",
+    docType: "澳門居民身份證",
+    documents: [{ type: "澳門居民身份證", name: "澳門身份證正面.jpg" }],
+    photoName: "近照.jpg",
+    personal: {
+      occupation: "工程師",
+      email: "demo@example.com",
+      phoneCode: "+853",
+      phone: "66123456",
+      address: "澳門南灣大馬路123號",
+    },
+    effectiveDate: "2026-08-30",
+    endDate: "2027-08-30",
+    companies: [],
+    relativeDocType: "",
+    relativeFiles: [],
+    relativeReadMethod: "",
+    relative: {
+      relation: "",
+      name: "",
+      en: "",
+      gender: "",
+      birth: "",
+      docType: "",
+      docNo: "",
+      occupation: "",
+      email: "",
+      phoneCode: "+853",
+      phone: "",
+      address: "",
+    },
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 7.3 右鍵演示填充設定 Demo Fill Profiles
+ * 對應臨櫃收件「核查禁入紀錄」的三種結果：
+ * renew（30天內到期）→ 13888888、blocked（未到期）→ 88888888、
+ * fresh（無紀錄，新申請）→ 12345670。
+ * ---------------------------------------------------------------- */
+const DemoFillProfiles = {
+  renew: { gender: "男", enName: "CHAN DAI MAN", birth: "1998-08-08", docType: "澳門居民身份證", docNo: "13888888" },
+  blocked: { gender: "男", enName: "WONG CHI MING", birth: "1985-03-12", docType: "澳門居民身份證", docNo: "88888888" },
+  fresh: { gender: "女", enName: "LEI MEI LENG", birth: "1992-07-21", docType: "澳門居民身份證", docNo: "12345670" },
+};

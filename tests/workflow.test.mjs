@@ -58,8 +58,6 @@ test("一戶通主管可退回，亦可審批至完成", () => {
   assert.equal(current.status, "已審批");
   current = run(current, "complete_processing", ROLES.PROCESSOR);
   assert.equal(current.flags.processingCompleted, true);
-  current = run(current, "print_signed_documents", ROLES.COUNTER);
-  assert.equal(current.flags.documentsPrinted, true);
   current = run(current, "send_pickup_notice", ROLES.COUNTER);
   assert.equal(current.status, "已通知取件");
   current = run(current, "record_handover", ROLES.COUNTER);
@@ -110,7 +108,6 @@ test("系統管理員可操作全流程，不限角色，唯終止狀態除外",
   current = run(current, "approve_sign", ROLES.ADMIN);
   assert.equal(current.status, "已審批");
   current = run(current, "complete_processing", ROLES.ADMIN);
-  current = run(current, "print_signed_documents", ROLES.ADMIN);
   current = run(current, "send_pickup_notice", ROLES.ADMIN);
   current = run(current, "record_handover", ROLES.ADMIN);
   assert.equal(current.status, "完成");
