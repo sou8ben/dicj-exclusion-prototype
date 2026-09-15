@@ -1,2 +1,9 @@
 dist/
 .DS_Store
+
+.claude/
+.github/
+.openai/
+.gitignore
+
+.wrangler/

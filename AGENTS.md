@@ -29,6 +29,7 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 ## Durable code decisions
 
+- Group `FRONTEND_CHANGELOG` entries by update date. Put the newest dated section first using the title format `YYYY.MM.DD 更新內容`, and place new change items under that date instead of mixing them into older feature-category sections.
 - All functions in `src/app.js` use descriptive PascalCase/English names: `statusColor`, `Button`, `Badge`, `Field`, `Select`, `TableEmptyState`, `WizardProgress`, `ProcessTimeline`, `Pager`, `SearchFilters`, `ApplicationsTable`, `DashboardScreen`, `IntakeReadScreen`, `ApplicationFormScreen`, `ApplicationPreviewScreen`, `ApplicationsListScreen`, `ApplicationDetailScreen`, `ReportsScreen`, `SanctionsScreen`, `TemplatesScreen`, `PageHeader`, `SettingsScreen`, `OperationLogsScreen`, `Modal`, `LoginScreen`, `App`. Internal variables use readable names (`isOpen`, `isLoggedIn`, `role`, `applications`, `toast`, `handleHashChange`, `handleGlobalClick`, etc.). Keep these names when adding or modifying functionality.
 - Interop globals are declared in `src/vendor.js` (`React`, `jsx`, `StrictMode`) and `src/icons.js` (`ReactDOM`). When adding new code that uses React APIs, use `React.xxx` (e.g. `React.useState`, `React.createElement`), `jsx.jsx`/`jsx.jsxs`/`jsx.Fragment`, `ReactDOM.createRoot`, and `StrictMode.StrictMode`.
 - Script load order is `workflow.js → vendor.js → demo-data.js → icons.js → app.js`. Top-level `const`/`var` declarations are shared as globals across files.

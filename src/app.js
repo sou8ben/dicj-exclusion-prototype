@@ -27,28 +27,25 @@ const NAV_ITEMS = [
   { label: "帳號管理", id: "accounts", icon: rf },
   { label: "操作日誌", id: "logs", icon: W8 },
 ];
-const APP_VERSION = "2026.09.15 09:00AM";
+const APP_VERSION = "2026.09.15 06:47PM";
 const FRONTEND_CHANGELOG = [
   {
-    title: "暫存草稿流程",
+    title: "2026.09.15 更新內容",
+    items: [
+      "移除申請概況中的當前負責角色欄位。",
+      "案件詳情的期限、通知與聲明資料支援編輯、儲存及取消。",
+    ],
+  },
+  {
+    title: "2026.09.14 更新內容",
     items: [
       "移除工作台的暫存 Panel，草稿改於核查禁入紀錄步驟偵測。",
       "支援按最新禁入紀錄判斷草稿能否恢復，並顯示不相容原因。",
       "恢復草稿時可自動切換申請或廢止流程；重新填寫會先刪除舊草稿。",
       "保留自動暫存、離開流程時儲存，以及提交成功後刪除草稿。",
-    ],
-  },
-  {
-    title: "核查禁入紀錄",
-    items: [
       "列表欄位調整為申請編號、類型、來源、狀態、禁入娛樂場範圍、創建時間、生效時間及廢止時間。",
       "保留操作／查閱欄，並新增類型、來源及狀態排序。",
       "移除核查結果標題右側的生效中狀態標籤。",
-    ],
-  },
-  {
-    title: "介面整理",
-    items: [
       "移除表單頁的草稿恢復彈窗及自動暫存提示 popup。",
       "移除流程頁 section-title 右側的輔助說明文字。",
       "版本號移至左側導覽列底部，點擊可查看本次前端改動。",
@@ -2571,11 +2568,23 @@ function BuildApplicantDetails(application) {
     ...(application.applicantDetails || {}),
   };
 }
-function ApplicationDetailScreen({ application: application, onBack: onBack, onTransition: onTransition, onUpdateApplicant: onUpdateApplicant, role: role }) {
+function BuildTermsDetails(application) {
+  return {
+    effectiveDate: "2026-07-08",
+    endDate: "2027-07-08",
+    scope: "全部",
+    pickupMethod: "親臨",
+    counsel: "同意",
+    ...(application.termsDetails || {}),
+  };
+}
+function ApplicationDetailScreen({ application: application, onBack: onBack, onTransition: onTransition, onUpdateApplicant: onUpdateApplicant, onUpdateTerms: onUpdateTerms, role: role }) {
   const [note, setNote] = React.useState(""),
     [toast, setToast] = React.useState(""),
     [isEditingApplicant, setIsEditingApplicant] = React.useState(false),
     [applicantDraft, setApplicantDraft] = React.useState(() => BuildApplicantDetails(application)),
+    [isEditingTerms, setIsEditingTerms] = React.useState(false),
+    [termsDraft, setTermsDraft] = React.useState(() => BuildTermsDetails(application)),
     [confirmAction, setConfirmAction] = React.useState(null),
     [previewDoc, setPreviewDoc] = React.useState(null),
     [attachments, setAttachments] = React.useState([
@@ -2589,9 +2598,11 @@ function ApplicationDetailScreen({ application: application, onBack: onBack, onT
     documentActions = actions.filter((item) => item.section === "document"),
     notificationActions = actions.filter((item) => item.section === "notification"),
     applicantDetails = BuildApplicantDetails(application),
+    termsDetails = BuildTermsDetails(application),
     canEditApplicant =
       (role === WorkflowRoles.COUNTER || role === WorkflowRoles.ADMIN) &&
       ["待處理", "待通知補件", "已通知補件", "退回"].includes(application.status),
+    canEditTerms = canEditApplicant,
     updateApplicantDraft = (field, value) =>
       setApplicantDraft({ ...applicantDraft, [field]: value }),
     cancelApplicantEdit = () => {
@@ -2615,6 +2626,29 @@ function ApplicationDetailScreen({ application: application, onBack: onBack, onT
         setApplicantDraft(savedDetails),
         setIsEditingApplicant(false),
         setToast("申請人資料已更新"),
+        setTimeout(() => setToast(""), 2600));
+    },
+    updateTermsDraft = (field, value) => setTermsDraft({ ...termsDraft, [field]: value }),
+    cancelTermsEdit = () => {
+      (setTermsDraft(BuildTermsDetails(application)), setIsEditingTerms(false));
+    },
+    saveTermsDetails = () => {
+      if (!termsDraft.effectiveDate || !termsDraft.endDate) {
+        (setToast("請填寫生效日及廢止日"), setTimeout(() => setToast(""), 2600));
+        return;
+      }
+      if (termsDraft.endDate < termsDraft.effectiveDate) {
+        (setToast("廢止日不可早於生效日"), setTimeout(() => setToast(""), 2600));
+        return;
+      }
+      const savedDetails = {
+        ...termsDraft,
+        scope: termsDraft.scope.trim(),
+      };
+      (onUpdateTerms(savedDetails),
+        setTermsDraft(savedDetails),
+        setIsEditingTerms(false),
+        setToast("期限、通知與聲明已更新"),
         setTimeout(() => setToast(""), 2600));
     },
     runAction = (action) => {
@@ -2727,12 +2761,6 @@ function ApplicationDetailScreen({ application: application, onBack: onBack, onT
                         children: [
                           jsx.jsx("span", { children: "申請時間" }),
                           jsx.jsx("b", { children: application.time }),
-                        ],
-                      }),
-                      jsx.jsxs("div", {
-                        children: [
-                          jsx.jsx("span", { children: "當前負責角色" }),
-                          jsx.jsx("b", { children: getResponsibleRole(application) }),
                         ],
                       }),
                     ],
@@ -2915,45 +2943,120 @@ function ApplicationDetailScreen({ application: application, onBack: onBack, onT
                   jsx.jsxs("div", {
                     className: "panel-subsection",
                     children: [
-                      jsx.jsx("div", {
-                        className: "section-title",
-                        children: jsx.jsx("h2", { children: "期限、通知與聲明" }),
-                      }),
                       jsx.jsxs("div", {
-                        className: "summary-grid",
+                        className: "section-title",
                         children: [
-                          jsx.jsxs("div", {
-                            children: [
-                              jsx.jsx("span", { children: "生效日" }),
-                              jsx.jsx("b", { children: "2026-07-08" }),
-                            ],
-                          }),
-                          jsx.jsxs("div", {
-                            children: [
-                              jsx.jsx("span", { children: "廢止日" }),
-                              jsx.jsx("b", { children: "2027-07-08" }),
-                            ],
-                          }),
-                          jsx.jsxs("div", {
-                            children: [
-                              jsx.jsx("span", { children: "禁入之承批公司" }),
-                              jsx.jsx("b", { children: "全部" }),
-                            ],
-                          }),
-                          jsx.jsxs("div", {
-                            children: [
-                              jsx.jsx("span", { children: "取件方式" }),
-                              jsx.jsx("b", { children: "親臨" }),
-                            ],
-                          }),
-                          jsx.jsxs("div", {
-                            children: [
-                              jsx.jsx("span", { children: "輔導服務" }),
-                              jsx.jsx("b", { children: "同意" }),
-                            ],
-                          }),
+                          jsx.jsx("h2", { children: "期限、通知與聲明" }),
+                          canEditTerms &&
+                            !isEditingTerms &&
+                            jsx.jsx(Button, {
+                              variant: "outline",
+                              icon: T0,
+                              onClick: () => {
+                                (setTermsDraft(BuildTermsDetails(application)), setIsEditingTerms(true));
+                              },
+                              children: "編輯",
+                            }),
                         ],
                       }),
+                      isEditingTerms
+                        ? jsx.jsxs(jsx.Fragment, {
+                            children: [
+                              jsx.jsxs("div", {
+                                className: "form-grid cols-3 applicant-edit-grid",
+                                children: [
+                                  jsx.jsx(Field, {
+                                    label: "生效日",
+                                    required: true,
+                                    children: jsx.jsx("input", {
+                                      type: "date",
+                                      value: termsDraft.effectiveDate,
+                                      onChange: (event) => updateTermsDraft("effectiveDate", event.target.value),
+                                    }),
+                                  }),
+                                  jsx.jsx(Field, {
+                                    label: "廢止日",
+                                    required: true,
+                                    children: jsx.jsx("input", {
+                                      type: "date",
+                                      value: termsDraft.endDate,
+                                      min: termsDraft.effectiveDate || undefined,
+                                      onChange: (event) => updateTermsDraft("endDate", event.target.value),
+                                    }),
+                                  }),
+                                  jsx.jsx(Field, {
+                                    label: "禁入之承批公司",
+                                    children: jsx.jsx("input", {
+                                      value: termsDraft.scope,
+                                      onChange: (event) => updateTermsDraft("scope", event.target.value),
+                                    }),
+                                  }),
+                                  jsx.jsx(Field, {
+                                    label: "取件方式",
+                                    children: jsx.jsxs(Select, {
+                                      value: termsDraft.pickupMethod,
+                                      onChange: (event) => updateTermsDraft("pickupMethod", event.target.value),
+                                      children: ["親臨", "郵寄", "電子方式"].map((option) =>
+                                        jsx.jsx("option", { value: option, children: option }, option),
+                                      ),
+                                    }),
+                                  }),
+                                  jsx.jsx(Field, {
+                                    label: "輔導服務",
+                                    children: jsx.jsxs(Select, {
+                                      value: termsDraft.counsel,
+                                      onChange: (event) => updateTermsDraft("counsel", event.target.value),
+                                      children: ["同意", "不同意"].map((option) =>
+                                        jsx.jsx("option", { value: option, children: option }, option),
+                                      ),
+                                    }),
+                                  }),
+                                ],
+                              }),
+                              jsx.jsxs("div", {
+                                className: "form-actions applicant-edit-actions",
+                                children: [
+                                  jsx.jsx(Button, { variant: "ghost", onClick: cancelTermsEdit, children: "取消" }),
+                                  jsx.jsx(Button, { onClick: saveTermsDetails, children: "儲存" }),
+                                ],
+                              }),
+                            ],
+                          })
+                        : jsx.jsxs("div", {
+                            className: "summary-grid",
+                            children: [
+                              jsx.jsxs("div", {
+                                children: [
+                                  jsx.jsx("span", { children: "生效日" }),
+                                  jsx.jsx("b", { children: termsDetails.effectiveDate || "—" }),
+                                ],
+                              }),
+                              jsx.jsxs("div", {
+                                children: [
+                                  jsx.jsx("span", { children: "廢止日" }),
+                                  jsx.jsx("b", { children: termsDetails.endDate || "—" }),
+                                ],
+                              }),
+                              jsx.jsxs("div", {
+                                children: [
+                                  jsx.jsx("span", { children: "禁入之承批公司" }),
+                                  jsx.jsx("b", { children: termsDetails.scope || "—" }),
+                                ],
+                              }),
+                              jsx.jsxs("div", {
+                                children: [
+                                  jsx.jsx("span", { children: "取件方式" }),
+                                  jsx.jsx("b", { children: termsDetails.pickupMethod || "—" }),
+                                ],
+                              }),
+                              jsx.jsxs("div", {
+                                children: [
+                                  jsx.jsx("span", { children: "輔導服務" }),
+                                  jsx.jsx("b", { children: termsDetails.counsel || "—" }),
+                                ],
+                              }),
+                            ],
+                          }),
                     ],
                   }),
                 ],
@@ -4469,6 +4572,16 @@ function App() {
             email: formData.personal.email,
             address: formData.personal.address,
           },
+          termsDetails: {
+            effectiveDate: formData.effectiveDate,
+            endDate: formData.endDate,
+            scope:
+              formData.scope === "全部"
+                ? "全部"
+                : formData.companies.join("、") || formData.scope,
+            pickupMethod: "親臨",
+            counsel: formData.counsel,
+          },
         });
       (formData.applicant &&
         formData.applicant.docType &&
@@ -4500,6 +4613,16 @@ function App() {
         ...currentApplication,
         name: details.name,
         applicantDetails: details,
+      };
+      (setApplications((list) =>
+        list.map((app) => (app.id === currentApplication.id ? updatedApplication : app)),
+      ), setCurrentApplication(updatedApplication));
+    },
+    handleTermsUpdate = (details) => {
+      if (!currentApplication) return;
+      const updatedApplication = {
+        ...currentApplication,
+        termsDetails: details,
       };
       (setApplications((list) =>
         list.map((app) => (app.id === currentApplication.id ? updatedApplication : app)),
@@ -4544,6 +4667,7 @@ function App() {
           onBack: () => navigate("applications"),
           onTransition: handleTransition,
           onUpdateApplicant: handleApplicantUpdate,
+          onUpdateTerms: handleTermsUpdate,
           role: role,
         });
       if (route === "reports") return jsx.jsx(ReportsScreen, {});

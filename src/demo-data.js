@@ -40,7 +40,6 @@ const {
   ROLES: WorkflowRoles,
   getActionableApplications,
   getAvailableActions,
-  getResponsibleRole,
   transition: transitionApplication,
 } = dicjWorkflow;
 
