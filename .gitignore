@@ -4,6 +4,4 @@ dist/
 .claude/
 .github/
 .openai/
-.gitignore
-
 .wrangler/
